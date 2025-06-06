@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 410 410">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6a11cb;stop-opacity:1"></stop>
+      <stop offset="100%" style="stop-color:#2575fc;stop-opacity:1"></stop>
+    </linearGradient>
+  </defs>
+
+  <!-- Fondo degradado con esquinas redondeadas -->
+  <rect width="410" height="410" rx="80" fill="url(#grad)"></rect>
+
+  <!-- Lista centrada de 3 tareas -->
+  <g transform="translate(65, 140)">
+    <!-- Tarea 1 -->
+    <rect x="0" y="0" width="250" height="30" rx="5" fill="#fff"></rect>
+    <circle cx="280" cy="15" r="12" fill="none" stroke="#fff" stroke-width="3"></circle>
+
+    <!-- Tarea 2 -->
+    <rect x="0" y="50" width="230" height="30" rx="5" fill="#fff"></rect>
+    <circle cx="280" cy="65" r="12" fill="none" stroke="#fff" stroke-width="3"></circle>
+
+    <!-- Tarea 3 -->
+    <rect x="0" y="100" width="260" height="30" rx="5" fill="#fff"></rect>
+    <circle cx="280" cy="115" r="12" fill="none" stroke="#fff" stroke-width="3"></circle>
+  </g>
+</svg>
