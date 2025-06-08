@@ -1,16 +1,22 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import React, { useState } from 'react';
 import './App.css'
 import Home from './pages/Home';
+import Layout from './components/Layout.jsx';
 
-function App() {
+function App(){
+  
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   return (
-    <Router>
-      <Routes>
-        <Route path='/' element={<Home/>}/>
-      </Routes>
-    </Router>
-  )
-}
+      <Layout isAuthenticated={isAuthenticated}>
+      <Router>
+        <Routes>
+          <Route path='/' element={<Home/>}/>
+        </Routes>
+      </Router>
+    </Layout>
+  );
+};
 
 export default App
