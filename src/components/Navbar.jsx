@@ -1,9 +1,12 @@
 import React from 'react';
 
-const Navbar = ({ isAuthenticated }) => {
+const Navbar = ({ isAuthenticated, onMenuClick }) => {
   return (
-    <nav className="bg-[#1D1825] text-[#9E78CF] flex justify-between items-center px-8 py-4">
-      <div className="text-lg font-semibold">ToDo App</div>
+    <nav className="bg-[#1D1825] text-[#9E78CF] flex justify-between items-center px-8 py-4 border-b border-[#9E78CF]">
+      <div className="flex items-center space-x-4">
+        <button onClick={onMenuClick} className="text-2xl focus:outline-none">☰</button>
+        <div className="text-lg font-semibold">ToDo App</div>
+      </div>
       <div>
         {isAuthenticated ? (
           <div className="text-2xl">👤</div>
