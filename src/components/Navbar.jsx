@@ -1,20 +1,36 @@
-import React from 'react';
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { UserAuth } from '../context/AuthContext.jsx';
 
-const Navbar = ({ isAuthenticated, onMenuClick }) => {
+
+const Navbar = () => {
+  const { session, signOut } = UserAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async (e) => {
+    e.preventDefault();
+
+    try {
+      await signOut();
+      navigate("/");
+    } catch (err) {
+      setError("An unexpected error occurred."); // Catch unexpected errors
+    }
+  };
+
   return (
-    <nav className="bg-[#1D1825] text-[#9E78CF] flex justify-between items-center px-8 py-4 border-b border-[#9E78CF]">
+    <nav className="bg-[#1D1825] text-[#9E78CF] flex justify-between items-center px-8 py-4">
       <div className="flex items-center space-x-4">
-        <button onClick={onMenuClick} className="text-2xl focus:outline-none">☰</button>
-        <div className="text-lg font-semibold">ToDo App</div>
+        <Link to="/home" className="text-lg font-semibold">ToDo App</Link>
       </div>
+      <h2>Welcome, {session?.user?.email}</h2>
       <div>
-        {isAuthenticated ? (
-          <div className="text-2xl">👤</div>
-        ) : (
-          <button className="bg-[#9E78CF] text-[#0D0714] font-semibold px-4 py-2 rounded hover:opacity-90 transition">
-            Login
-          </button>
-        )}
+        <button 
+          onClick={handleSignOut} 
+          className="bg-[#9E78CF] text-[#0D0714] font-semibold px-4 py-2 rounded hover:opacity-90 hover:cursor-pointer transition"
+        >
+          Cerrar Sesion
+        </button>
       </div>
     </nav>
   );

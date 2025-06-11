@@ -1,22 +1,18 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import React, { useState } from 'react';
-import './App.css'
-import Home from './pages/Home';
-import Layout from './components/Layout.jsx';
+import { useContext, useState } from "react";
 
-function App(){
-  
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
+import { Link } from "react-router-dom";
+import Signin from "./components/Signin";
+
+import { UserAuth } from "./context/AuthContext";
+
+function App() {
+  const { user } = UserAuth();
 
   return (
-      <Layout isAuthenticated={isAuthenticated}>
-      <Router>
-        <Routes>
-          <Route path='/' element={<Home/>}/>
-        </Routes>
-      </Router>
-    </Layout>
+    <>
+      <Signin />
+    </>
   );
-};
+}
 
-export default App
+export default App;
