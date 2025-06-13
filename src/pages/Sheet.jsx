@@ -1,62 +1,61 @@
+// src/pages/Sheet.jsx
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getSupaBaseClient } from "../supabase-client";
+import CategoriesList from "../components/categories/CategoriesList";
 
 export default function Sheet() {
-  const { id } = useParams();              // recupera el sheet_id de la URL
+  const { id: sheet_id } = useParams();
   const [categories, setCategories] = useState([]);
+  const [tasksByCat, setTasksByCat] = useState({});
   const [loading, setLoading] = useState(true);
+  const supabase = getSupaBaseClient("todo");
 
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchData = async () => {
       setLoading(true);
-      const supabase = getSupaBaseClient("todo");
-      const { data, error } = await supabase
+      const { data: cats } = await supabase
         .from("categories")
         .select("id, name, color, created_at")
-        .eq("sheet_id", id)
+        .eq("sheet_id", sheet_id)
         .eq("is_deleted", false)
-        .order("created_at", { ascending: true });
+        .order("created_at");
+      setCategories(cats || []);
 
-      if (error) {
-        console.error("Error al cargar categorías:", error);
-        setCategories([]);
-      } else {
-        setCategories(data || []);
+      const catIds = (cats || []).map((c) => c.id);
+      if (catIds.length > 0) {
+        const { data: tasks } = await supabase
+          .from("tasks")
+          .select("id, category_id, name, is_completed, is_deleted")
+          .in("category_id", catIds)
+          .order("created_at");
+        const grouped = {};
+        tasks.forEach((t) => {
+          if (!t.is_deleted) {
+            grouped[t.category_id] = grouped[t.category_id] || [];
+            grouped[t.category_id].push(t);
+          }
+        });
+        setTasksByCat(grouped);
       }
       setLoading(false);
     };
 
-    fetchCategories();
-  }, [id]);
+    fetchData();
+  }, [sheet_id]);
 
   return (
     <div className="min-h-screen bg-[#0D0714] text-white p-6">
-      <h1 className="text-3xl font-bold text-center mb-6 text-[#9E78CF]">
-        Categorías
+      <h1 className="text-3xl font-bold text-center mb-4 text-[#9E78CF]">
+        Categorías & Tareas
       </h1>
-
       {loading ? (
-        <p className="text-center text-white/70">Cargando categorías…</p>
-      ) : categories.length === 0 ? (
-        <p className="text-center text-white/70">No hay categorías aún.</p>
+        <p className="text-center">Cargando…</p>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-          {categories.map((cat) => {
-            const bg = cat.color || "#2E2B3A"; // gris por defecto
-            return (
-              <div
-                key={cat.id}
-                className="rounded-2xl p-4 flex items-center justify-center shadow-md hover:opacity-90 transition"
-                style={{ backgroundColor: bg, aspectRatio: "1 / 1" }}
-              >
-                <span className="text-center font-semibold text-[#0D0714]">
-                  {cat.name}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+        <CategoriesList
+          categories={categories}
+          tasksByCat={tasksByCat}
+        />
       )}
     </div>
   );

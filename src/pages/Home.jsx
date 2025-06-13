@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {supabase, getSupaBaseClient} from '../supabase-client'; // Asegúrate de que 'supabase-client' inicialice supabase correctamente
-import { useNavigate } from "react-router-dom";
+
 import { UserAuth } from "../context/AuthContext";
 import { SheetsList } from '../components/Sheets/SheetsList';
 import {CreateSheetModal} from '../components/Sheets/CreateSheetModal';
@@ -32,11 +32,11 @@ function Home() {
     }
   };
 
-    const handleSheetAdded = async (newSheet) => {
+    const handleSheetAdded = async () => {
       await fetchSheets();
     };
 
-    const handleSheetUpdated = async (updatedSheet) => {
+    const handleSheetUpdated = async () => {
       await fetchSheets();
     };
 

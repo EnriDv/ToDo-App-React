@@ -1,10 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import Navbar from './Navbar.jsx';
 import Footer from './Footer.jsx';
 
 const Layout = ({ children }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
   return (
     <div className="min-h-screen flex flex-col bg-[#0D0714] text-white">
       <Navbar />

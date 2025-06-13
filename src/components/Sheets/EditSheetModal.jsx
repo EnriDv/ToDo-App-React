@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { SketchPicker } from "react-color";
 import { getSupaBaseClient } from "../../supabase-client";
-import { UserAuth } from "../../context/AuthContext";
 
 export const EditSheetModal = ({ isOpen, onClose, sheet, onSheetUpdated }) => {
   const [name, setName] = useState("");
   const [color, setColor] = useState("#2E2B3A");
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { session } = UserAuth();
 
   useEffect(() => {
     if (sheet) {

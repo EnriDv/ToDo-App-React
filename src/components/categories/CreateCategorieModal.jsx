@@ -1,68 +1,54 @@
+// src/components/categories/CreateCategoryModal.jsx
 import React, { useState } from "react";
 import { SketchPicker } from "react-color";
 import { getSupaBaseClient } from "../../supabase-client";
-import { UserAuth } from "../../context/AuthContext";
+import { useParams } from "react-router-dom";
 
-export const CreateSheetModal = ({ isOpen, onClose, onSheetAdded }) => {
+export function CreateCategoryModal({ isOpen, onClose, onCreated }) {
+  const { id: sheet_id } = useParams();
   const [name, setName] = useState("");
-  const [color, setColor] = useState("#2E2B3A");
+  const [color, setColor] = useState("#FFFFFF");
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { session } = UserAuth();
 
   if (!isOpen) return null;
 
   const handleCreate = async () => {
     if (!name.trim()) {
-    alert("El nombre no puede estar vacío.");
-    return;
-  }
-
+      alert("El nombre no puede estar vacío.");
+      return;
+    }
     setLoading(true);
-    
-    const userId = session?.user?.id;
+    const supabase = getSupaBaseClient("todo");
+    const payload = { sheet_id, name, color };
 
-    const newSheet = {
-      name,
-      color,
-      user_id: userId,
-    };
-    const supabaseTodoClient = getSupaBaseClient('todo');
-    const { data, error } = await supabaseTodoClient
-      .from("sheets") // si está en esquema "todo"
-      .insert([newSheet])
-      .select()      // agrega .select() para que retorne la fila
+    const { data, error } = await supabase
+      .from("categories")
+      .insert([payload])
       .single();
-      
+
     setLoading(false);
     if (error) {
-        console.error("Error al crear hoja:", error);
-        return;  // salir si hubo error para no continuar con código que espera data válido
-    }
-
-    if (!data) {
-        console.error("No se recibió un 'data' válido tras crear la hoja.", data);
-        return;
-    }
-
-    if (error) {
-      console.error("Error al crear hoja:", error);
+      console.error("Error al crear categoría:", error);
     } else {
-      onSheetAdded(data); 
+      onCreated(data);
       onClose();
       setName("");
-      setColor("#2E2B3A");
+      setColor("#FFFFFF");
+      setShowColorPicker(false);
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-[#1D1825] text-white rounded-lg p-6 w-full max-w-md shadow-lg relative">
-        <h2 className="text-xl font-semibold mb-4 text-center">Crear nueva Hoja</h2>
+      <div className="bg-[#1D1825] text-white rounded-lg p-6 w-full max-w-md shadow-lg">
+        <h2 className="text-xl font-semibold mb-4 text-center">
+          Crear nueva Categoría
+        </h2>
 
         <input
           type="text"
-          placeholder="Nombre de la hoja"
+          placeholder="Nombre de la categoría"
           value={name}
           onChange={(e) => setName(e.target.value)}
           className="w-full p-2 mb-4 rounded bg-[#0D0714] border border-gray-600 text-white placeholder-gray-400"
@@ -70,7 +56,7 @@ export const CreateSheetModal = ({ isOpen, onClose, onSheetAdded }) => {
 
         <div className="mb-4">
           <button
-            onClick={() => setShowColorPicker(!showColorPicker)}
+            onClick={() => setShowColorPicker((v) => !v)}
             className="w-full p-2 rounded bg-[#9E78CF] text-[#0D0714] font-semibold"
           >
             Seleccionar Color
@@ -88,7 +74,13 @@ export const CreateSheetModal = ({ isOpen, onClose, onSheetAdded }) => {
 
         <div className="flex justify-end space-x-2">
           <button
-            onClick={onClose}
+            onClick={() => {
+              onClose();
+              setName("");
+              setColor("#FFFFFF");
+              setShowColorPicker(false);
+            }}
+            disabled={loading}
             className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded"
           >
             Cancelar
@@ -104,4 +96,4 @@ export const CreateSheetModal = ({ isOpen, onClose, onSheetAdded }) => {
       </div>
     </div>
   );
-};
+}

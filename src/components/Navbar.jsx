@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { UserAuth } from '../context/AuthContext.jsx';
 
@@ -14,7 +14,7 @@ const Navbar = () => {
       await signOut();
       navigate("/");
     } catch (err) {
-      setError("An unexpected error occurred."); // Catch unexpected errors
+      console.error("An unexpected error occurred.", err); // Catch unexpected errors
     }
   };
 
