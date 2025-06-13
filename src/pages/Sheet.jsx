@@ -1,47 +1,66 @@
 // src/pages/Sheet.jsx
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { getSupaBaseClient } from "../supabase-client";
+import { taskRepository } from "../services/TaskRepository";
 import CategoriesList from "../components/categories/CategoriesList";
+import {TaskDetail} from "../components/tasks/TaskDetail";
 
 export default function Sheet() {
   const { id: sheet_id } = useParams();
-  const [categories, setCategories] = useState([]);
-  const [tasksByCat, setTasksByCat] = useState({});
   const [loading, setLoading] = useState(true);
-  const supabase = getSupaBaseClient("todo");
+  const [selectedTask, setSelectedTask] = useState(null);
+
+  const [categories, setCategories] = useState([]);
+
+  const handleTaskDetail = (task, taskCategories) => {
+    setSelectedTask(task);
+    // Si taskCategories está vacío, no lo actualices
+    if (Array.isArray(taskCategories) && taskCategories.length > 0) {
+      setCategories(taskCategories);
+    }
+  }
+
+  const closeTaskDetail = () => {
+    setSelectedTask(null);
+  };
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      const { data: cats } = await supabase
-        .from("categories")
-        .select("id, name, color, created_at")
-        .eq("sheet_id", sheet_id)
-        .eq("is_deleted", false)
-        .order("created_at");
-      setCategories(cats || []);
-
-      const catIds = (cats || []).map((c) => c.id);
-      if (catIds.length > 0) {
-        const { data: tasks } = await supabase
-          .from("tasks")
-          .select("id, category_id, name, is_completed, is_deleted")
-          .in("category_id", catIds)
-          .order("created_at");
-        const grouped = {};
-        tasks.forEach((t) => {
-          if (!t.is_deleted) {
-            grouped[t.category_id] = grouped[t.category_id] || [];
-            grouped[t.category_id].push(t);
-          }
-        });
-        setTasksByCat(grouped);
-      }
-      setLoading(false);
+    // CategoriesList maneja sus propias suscripciones, no necesitamos hacer nada aquí
+    return () => {
+      // No hay nada que limpiar
     };
+  }, [sheet_id]);
 
+  useEffect(() => {
+    // Subscribe to task updates
+    const taskUnsubscribe = taskRepository.addTaskListener((event) => {
+      switch (event.type) {
+        case 'create':
+          break;
+        case 'update':
+          break;
+        case 'delete':
+          break;
+      }
+    });
+
+    // Initial fetch
     fetchData();
+
+    return () => {
+      taskUnsubscribe();
+    };
   }, [sheet_id]);
 
   return (
@@ -50,13 +69,23 @@ export default function Sheet() {
         Categorías & Tareas
       </h1>
       {loading ? (
-        <p className="text-center">Cargando…</p>
+        <div className="flex justify-center items-center min-h-[200px]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#9E78CF]"></div>
+        </div>
       ) : (
-        <CategoriesList
-          categories={categories}
-          tasksByCat={tasksByCat}
+        <CategoriesList 
+          sheetId={sheet_id}
+          onTaskDetail={handleTaskDetail}
         />
       )}
+      <TaskDetail
+        isOpen={selectedTask !== null}
+        onClose={closeTaskDetail}
+        task={selectedTask}
+        categories={categories}
+        onUpdated={fetchData}
+        onDelete={fetchData}
+      />
     </div>
   );
 }

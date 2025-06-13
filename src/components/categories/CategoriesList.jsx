@@ -1,119 +1,267 @@
-import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { getSupaBaseClient } from "../../supabase-client.js";
+import React, { useState, useEffect } from "react";
+import { taskRepository } from "../../services/TaskRepository";
+import { categoryRepository } from "../../services/CategoryRepository";
 import CategorieCard from "./CategorieCard";
 import { CreateCategoryModal } from "./CreateCategorieModal";
-import { CreateTaskModal } from "../tasks/CreateTaskModal";
+import {CreateTaskModal} from "../tasks/CreateTaskModal";
+import { EditCategoryModal } from "./EditCategoryModal";
 import CategoryTaskList from "../tasks/CategoryTaskList";
+import { Plus } from 'lucide-react';
 
-export default function CategoriesList() {
-  const { id } = useParams();
-  const [categories, setCategories] = useState([]);
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showTaskModal, setShowTaskModal] = useState(false);
+export default function CategoriesList({ sheetId, onTaskDetail }) {
+    const [state, setState] = useState({
+        tasksByCategory: {},
+        categories: []
+    });
 
-  const fetchData = async () => {
-    setLoading(true);
-    const supabase = getSupaBaseClient("todo");
+    // Helper function to filter out deleted tasks
+    const filterDeletedTasks = (tasks) => {
+        return tasks.filter(task => !task.is_deleted);
+    };
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [selectedCategory, setSelectedCategory] = useState(null);
+    const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
 
-    // Primero obtenemos las categorías de esta hoja
-    const { data: catData } = await supabase
-      .from("categories")
-      .select("id, name, color")
-      .eq("sheet_id", id)
-      .eq("is_deleted", false);
+    // Subscribe to task updates
+    const taskUnsubscribe = taskRepository.addTaskListener((event) => {
+        // Handle different types of events
+        switch (event.type) {
+            case 'create':
+                if (!event.task || !event.task.category_id) return;
+                setState(prev => ({
+                    ...prev,
+                    tasksByCategory: {
+                        ...prev.tasksByCategory,
+                        [event.task.category_id]: filterDeletedTasks([
+                            ...(prev.tasksByCategory[event.task.category_id] || []),
+                            { ...event.task, is_deleted: false }
+                        ])
+                    }
+                }));
+                break;
+            case 'update':
+                if (!event.task || !event.task.category_id) return;
+                setState(prev => ({
+                    ...prev,
+                    tasksByCategory: {
+                        ...prev.tasksByCategory,
+                        [event.task.category_id]: filterDeletedTasks(prev.tasksByCategory[event.task.category_id]?.map(task => 
+                            task.id === event.task.id ? { ...event.task, is_deleted: false } : task
+                        ) || [])
+                    }
+                }));
+                break;
+            case 'delete':
+                if (!event.task || !event.task.category_id) return;
+                setState(prev => ({
+                    ...prev,
+                    tasksByCategory: {
+                        ...prev.tasksByCategory,
+                        [event.task.category_id]: filterDeletedTasks(prev.tasksByCategory[event.task.category_id]?.map(task => 
+                            task.id === event.task.id ? { ...event.task, is_deleted: true } : task
+                        ) || [])
+                    }
+                }));
+                break;
+        }
+    });
 
-    // Obtenemos los IDs de las categorías de esta hoja
-    const categoryIds = (catData || []).map(cat => cat.id);
+    // Subscribe to category updates
+    const categoryUnsubscribe = categoryRepository.addCategoryListener((event) => {
+        switch (event.type) {
+            case 'create':
+                setState(prev => ({
+                    ...prev,
+                    categories: [...prev.categories, event.category]
+                }));
+                break;
+            case 'update':
+                setState(prev => ({
+                    ...prev,
+                    categories: prev.categories.map(category => 
+                        category.id === event.category.id ? event.category : category
+                    )
+                }));
+                break;
+            case 'delete':
+                setState(prev => ({
+                    ...prev,
+                    categories: prev.categories.filter(category => category.id !== event.id)
+                }));
+                break;
+        }
+    });
 
-    // Luego obtenemos solo las tareas que pertenecen a estas categorías
-    const { data: taskData } = await supabase
-      .from("tasks")
-      .select("id, name, is_completed, is_deleted, category_id")
-      .eq("is_deleted", false)
-      .in("category_id", categoryIds);
+    useEffect(() => {
+        // Cleanup subscriptions
+        return () => {
+            taskUnsubscribe?.();
+            categoryUnsubscribe?.();
+        };
+    }, [sheetId, taskUnsubscribe, categoryUnsubscribe]);
 
-    setCategories(catData || []);
-    setTasks(taskData || []);
-    setLoading(false);
-  };
+    // Initial fetch
+    (async () => {
+        const allTasks = await taskRepository.getTasks();
+        const groupedTasks = allTasks.reduce((acc, task) => {
+            if (!task.is_deleted) {
+                acc[task.category_id] = acc[task.category_id] || [];
+                acc[task.category_id].push(task);
+            }
+            return acc;
+        }, {});
+        
+        // Get categories
+        const categories = await categoryRepository.getCategories(sheetId);
+        
+        setState({ 
+            tasksByCategory: groupedTasks,
+            categories
+        });
+    })();
 
-  useEffect(() => {
-    fetchData();
-  }, [id]);
+    const { categories } = state; // Use categories from state
+    
+    if (!categories) return null; // Loading state
 
-  const handleTaskCreated = (newTask) => {
-    fetchData();
-    setTasks((prev) => [...prev, newTask]);
-    setShowTaskModal(false);
-  };
+    // Pass task detail handler directly from props
+    const handleTaskDetail = (task) => {
+        // Siempre pasa las categorías actuales
+        onTaskDetail(task, state.categories);
+    };
 
-  const handleTaskUpdated = (updatedTask) => {
-    fetchData();
-    setTasks((prev) =>
-      prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
-    );
-  };
-
-  const handleTaskDeleted = (deletedId) => {
-    fetchData();
-    setTasks((prev) => prev.filter((t) => t.id !== deletedId));
-  };
+    // Return JSX
 
   return (
-    <div>
-      {/* Botones superiores */}
-      <div className="mb-4 flex gap-3">
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-white text-black px-4 py-2 rounded-lg text-sm hover:bg-gray-200"
-        >
-          ➕ Crear Categoría
-        </button>
-        <button
-          onClick={() => setShowTaskModal(true)}
-          className="bg-white text-black px-4 py-2 rounded-lg text-sm hover:bg-gray-200"
-        >
-          📝 Agregar Tarea
-        </button>
+    <div className="space-y-8">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-semibold text-[#9E78CF]">Categorías</h2>
       </div>
 
-      {/* Categorías con sus tareas */}
-      {loading ? (
-        <p className="text-center text-white/70">Cargando categorías y tareas…</p>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 mb-8">
-          {categories.map((cat) => (
-            <div key={cat.id} className="space-y-4">
-              <CategorieCard 
-                category={cat} 
-                onUpdated={fetchData}  
-              />
-              <CategoryTaskList
-                tasks={tasks.filter(t => t.category_id === cat.id)}
-                category={cat}
-                onTaskUpdated={handleTaskUpdated}
-                onTaskDeleted={handleTaskDeleted}
-              />
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Botones superiores */}
+      <div className="mb-4 flex gap-4">
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+        >
+          <Plus className="w-5 h-5 inline-block mr-2" />
+          Crear categoría
+        </button>
+        <button
+          onClick={() => setShowCreateTaskModal(true)}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+        >
+          <Plus className="w-5 h-5 inline-block mr-2" />
+          Crear tarea
+        </button>
+      </div>
 
       {/* Modales */}
       <CreateCategoryModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        onCreated={(newCat) => {setCategories((prev) => [...prev, newCat]); fetchData()}}
+        onCreated={() => {
+            taskRepository.getTasks().then(tasks => {
+                const groupedTasks = tasks.reduce((acc, task) => {
+                    if (!task.is_deleted) {
+                        acc[task.category_id] = acc[task.category_id] || [];
+                        acc[task.category_id].push(task);
+                    }
+                    return acc;
+                }, {});
+                setState({ tasksByCategory: groupedTasks });
+            });
+        }}
       />
       <CreateTaskModal
-        isOpen={showTaskModal}
-        onClose={() => setShowTaskModal(false)}
+        isOpen={showCreateTaskModal}
+        onClose={() => setShowCreateTaskModal(false)}
         categories={categories}
-        onCreated={handleTaskCreated}
+        onCreated={() => {
+            taskRepository.getTasks().then(tasks => {
+                const groupedTasks = tasks.reduce((acc, task) => {
+                    if (!task.is_deleted) {
+                        acc[task.category_id] = acc[task.category_id] || [];
+                        acc[task.category_id].push(task);
+                    }
+                    return acc;
+                }, {});
+                setState({ tasksByCategory: groupedTasks });
+            });
+        }}
       />
+      <EditCategoryModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        category={selectedCategory}
+        onUpdated={() => {
+            taskRepository.getTasks().then(tasks => {
+                const groupedTasks = tasks.reduce((acc, task) => {
+                    if (!task.is_deleted) {
+                        acc[task.category_id] = acc[task.category_id] || [];
+                        acc[task.category_id].push(task);
+                    }
+                    return acc;
+                }, {});
+                setState({ tasksByCategory: groupedTasks });
+            });
+        }}
+      />
+
+      {/* Lista de categorías */}
+      {categories && categories.length === 0 ? (
+        <p className="text-center text-white/70">No hay categorías disponibles</p>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 mb-8">
+          {categories.map((category) => (
+            <div key={category.id} className="space-y-4">
+              <CategorieCard
+                key={category.id}
+                category={category}
+                tasks={state.tasksByCategory[category.id] || []}
+                onEdit={() => {
+                  setSelectedCategory(category);
+                  setShowEditModal(true);
+                }}
+                onDelete={() => {
+                  categoryRepository.deleteCategory(category.id);
+                }}
+                onTaskDetail={handleTaskDetail}
+              />
+              <CategoryTaskList 
+                tasks={state.tasksByCategory[category.id] || []}
+                categories={state.categories}
+                onTaskUpdated={() => {
+                    taskRepository.getTasks().then(tasks => {
+                        const groupedTasks = tasks.reduce((acc, task) => {
+                            if (!task.is_deleted) {
+                                acc[task.category_id] = acc[task.category_id] || [];
+                                acc[task.category_id].push(task);
+                            }
+                            return acc;
+                        }, {});
+                        setState({ tasksByCategory: groupedTasks });
+                    });
+                }}
+                onTaskDeleted={() => {
+                    taskRepository.getTasks().then(tasks => {
+                        const groupedTasks = tasks.reduce((acc, task) => {
+                            if (!task.is_deleted) {
+                                acc[task.category_id] = acc[task.category_id] || [];
+                                acc[task.category_id].push(task);
+                            }
+                            return acc;
+                        }, {});
+                        setState({ tasksByCategory: groupedTasks });
+                    });
+                }}
+                onTaskDetail={onTaskDetail}
+              />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

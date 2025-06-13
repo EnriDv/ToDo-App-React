@@ -1,25 +1,24 @@
 // src/components/categories/CategorieCard.jsx
 import React, { useState } from "react";
-import { getSupaBaseClient } from "../../supabase-client";
-import { Pencil, Trash } from 'lucide-react';
-import TaskCard from "../tasks/TaskCard";
+import { Pencil, Trash, Plus } from 'lucide-react';
+import { categoryRepository } from "../../services/CategoryRepository";
 import { EditCategoryModal } from "./EditCategoryModal";
 import { DeleteConfirmationModal } from "../DeleteConfirmationModal";
+import { CreateTaskModal } from "../tasks/CreateTaskModal";
 
-export default function CategorieCard({ category, onUpdated }) {
+export default function CategorieCard({ category, onUpdated, categories }) {
+  const [showCreateTask, setShowCreateTask] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
-  const supabase = getSupaBaseClient("todo");
   const isDefault = category?.name === "To Do";
 
   const handleDelete = async () => {
-    const { error } = await supabase
-      .from("categories")
-      .update({ is_deleted: true })
-      .eq("id", category.id);
-    if (!error) {
+    try {
+      await categoryRepository.deleteCategory(category.id);
       setShowDelete(false);
       onUpdated?.();
+    } catch (error) {
+      console.error('Error deleting category:', error);
     }
   };
 
@@ -39,10 +38,9 @@ export default function CategorieCard({ category, onUpdated }) {
             </div>
           )}
         </div>
-
       </div>
 
-      {/* Modales */}
+      
       {!isDefault && (
         <EditCategoryModal
           isOpen={showEdit}

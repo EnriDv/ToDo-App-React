@@ -1,22 +1,39 @@
-import React from "react";
-import { getSupaBaseClient } from "../../supabase-client";
+import React, { useEffect } from "react";
+import { taskRepository } from "../../services/TaskRepository";
 
-export default function TaskCard({ task, category, onUpdated }) {
-  const supabase = getSupaBaseClient("todo");
-
-  const toggleCompleted = async () => {
-    const { data } = await supabase
-      .from("tasks")
-      .update({ is_completed: !task.is_completed })
-      .eq("id", task.id)
-      .select()
-      .single();
-
-    if (data) onUpdated(data);
+export default function TaskCard({ task, category, onUpdated, onDetailClick }) {
+  const handleClick = (e) => {
+    // Solo abrir detalles si se hace clic en el texto o la categoría
+    if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'SPAN') {
+      onDetailClick(task);
+    }
   };
 
+  const toggleCompleted = async () => {
+    try {
+      const updatedTask = await taskRepository.updateTask(task.id, { is_completed: !task.is_completed });
+      onUpdated(updatedTask);
+    } catch (error) {
+      console.error('Error updating task:', error);
+    }
+  };
+
+  // Subscribe to task updates
+  useEffect(() => {
+    const unsubscribe = taskRepository.addTaskListener((event) => {
+      if (event.type === 'update' && event.task.id === task.id) {
+        onUpdated(event.task);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [task.id, onUpdated]);
+
   return (
-    <div className="bg-white rounded-xl p-4 shadow text-black">
+    <div 
+      className="bg-white rounded-xl p-4 shadow text-black cursor-pointer hover:shadow-lg transition-shadow duration-200"
+      onClick={handleClick}
+    >
       <div className="flex items-center gap-2">
         <input
           type="checkbox"

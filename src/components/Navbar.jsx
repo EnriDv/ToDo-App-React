@@ -11,7 +11,7 @@ const Navbar = () => {
     e.preventDefault();
 
     try {
-      await signOut();
+      // await signOut();
       navigate("/");
     } catch (err) {
       console.error("An unexpected error occurred.", err); // Catch unexpected errors

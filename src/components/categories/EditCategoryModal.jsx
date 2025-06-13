@@ -1,7 +1,7 @@
 // components/categories/EditCategoryModal.jsx
 import React, { useState, useEffect } from "react";
 import { SketchPicker } from "react-color";
-import { getSupaBaseClient } from "../../supabase-client.js";
+import { categoryRepository } from "../../services/CategoryRepository";
 
 export const EditCategoryModal = ({ isOpen, onClose, category, onUpdated }) => {
   const [name, setName] = useState("");
@@ -25,20 +25,19 @@ export const EditCategoryModal = ({ isOpen, onClose, category, onUpdated }) => {
     }
 
     setLoading(true);
-    const supabase = getSupaBaseClient("todo");
 
-    const { data, error } = await supabase
-      .from("categories")
-      .update({ name, color })
-      .eq("id", category.id)
-      .single();
-
-    setLoading(false);
-    if (error) {
-      console.error("Error al actualizar categoría:", error);
-    } else {
-      onUpdated(data);
+    try {
+      const updatedCategory = await categoryRepository.updateCategory(category.id, {
+        name,
+        color
+      });
+      
+      onUpdated(updatedCategory);
       onClose();
+    } catch (error) {
+      console.error("Error al actualizar categoría:", error);
+    } finally {
+      setLoading(false);
     }
   };
 

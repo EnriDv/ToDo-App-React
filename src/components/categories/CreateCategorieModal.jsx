@@ -1,8 +1,8 @@
 // src/components/categories/CreateCategoryModal.jsx
 import React, { useState } from "react";
 import { SketchPicker } from "react-color";
-import { getSupaBaseClient } from "../../supabase-client";
 import { useParams } from "react-router-dom";
+import { categoryRepository } from "../../services/CategoryRepository";
 
 export function CreateCategoryModal({ isOpen, onClose, onCreated }) {
   const { id: sheet_id } = useParams();
@@ -19,23 +19,23 @@ export function CreateCategoryModal({ isOpen, onClose, onCreated }) {
       return;
     }
     setLoading(true);
-    const supabase = getSupaBaseClient("todo");
-    const payload = { sheet_id, name, color };
 
-    const { data, error } = await supabase
-      .from("categories")
-      .insert([payload])
-      .single();
-
-    setLoading(false);
-    if (error) {
-      console.error("Error al crear categoría:", error);
-    } else {
-      onCreated(data);
+    try {
+      const category = await categoryRepository.createCategory({
+        sheet_id,
+        name,
+        color
+      });
+      
+      onCreated(category);
       onClose();
       setName("");
       setColor("#FFFFFF");
       setShowColorPicker(false);
+    } catch (error) {
+      console.error("Error al crear categoría:", error);
+    } finally {
+      setLoading(false);
     }
   };
 

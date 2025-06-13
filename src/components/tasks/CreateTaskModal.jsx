@@ -1,31 +1,44 @@
-import React, { useState } from "react";
-import { getSupaBaseClient } from "../../supabase-client";
+import React, { useState, useEffect } from "react";
+import { taskRepository } from "../../services/TaskRepository";
 
 export function CreateTaskModal({ isOpen, onClose, categories, onCreated }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [timeLimit, setTimeLimit] = useState("");
-  const defaultCategory = categories.find((c) => c.name === "To Do");
+  const [selectedCategory, setSelectedCategory] = useState(null);
+
+  useEffect(() => {
+    if (!categories) return;
+
+    // Buscar la primera categoría no eliminada de la hoja
+    const validCategories = categories.filter(c => !c?.is_deleted);
+    setSelectedCategory(validCategories[0]?.id);
+
+    // Subscribe to task creation events
+    const unsubscribe = taskRepository.addTaskListener((event) => {
+      if (event.type === 'create') {
+        onCreated(event.task);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [categories, onCreated]);
 
   const handleSubmit = async () => {
-    const supabase = getSupaBaseClient("todo");
-
-    const { data, error } = await supabase
-      .from("tasks")
-      .insert({
+    try {
+      const newTask = await taskRepository.createTask({
         name,
         description,
-        time_limit: new Date(timeLimit).toISOString(),
-        category_id: defaultCategory.id,
-      })
-      .select()
-      .single();
+        time_limit: timeLimit,
+        category_id: selectedCategory,
+      });
 
-    if (!error && data) {
-      onCreated(data);
       setName("");
       setDescription("");
       setTimeLimit("");
+      onClose();
+    } catch (error) {
+      console.error('Error creating task:', error);
     }
   };
 
@@ -48,6 +61,22 @@ export function CreateTaskModal({ isOpen, onClose, categories, onCreated }) {
           onChange={(e) => setDescription(e.target.value)}
           className="w-full mb-2 px-3 py-2 border rounded"
         />
+        <div className="mb-4">
+          <label className="block mb-1">Categoría</label>
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="w-full px-3 py-2 border rounded"
+          >
+            {categories
+              .filter(c => !c.is_deleted)
+              .map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+          </select>
+        </div>
         <input
           type="datetime-local"
           value={timeLimit}
