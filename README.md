@@ -8,6 +8,9 @@
 - **Testing**: Vitest
 - **Build Tool**: Vite
 
+![Tecnologias](./public/Screenshot%202025-06-13%20082806.png)
+
+
 ##  Cómo Ejecutar el Proyecto
 
 1. Clona el repositorio:
@@ -66,17 +69,22 @@ Estos patrones ayudan a mantener el código:
 ```
 src/
 ├── components/           # Componentes reutilizables
-│   ├── tasks/           # Componentes relacionados con tareas
-│   └── categories/      # Componentes relacionados con categorías
+│   ├── tasks/
+│   └── categories/
+│   └── Sheets/
 ├── pages/               # Páginas principales
+│   └── home.jsx        # Página principal
 │   └── Sheet.jsx        # Página principal de la hoja de tareas
 ├── services/            # Servicios y repositorios
-│   └── TaskRepository.js # Repositorio para operaciones de tareas
-├── utils/              # Utilidades y patrones
+│   └── TaskRepository.js 
+├── utils/              
 │   └── Subject.js      # Implementación del patrón Observer
 ├── supabase-client.js   # Cliente de Supabase
 └── App.jsx             # Componente principal
 ```
+
+![/src](./public/Screenshot%202025-06-13%20083220.png)
+![/src/components](./public/Screenshot%202025-06-13%20083232.png)
 
 ## Descripción del Problema
 
